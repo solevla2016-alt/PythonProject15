@@ -198,31 +198,33 @@ GET
 Список публичных привычек (только чтение)
 
 PythonProject15/
-├── config/                  # Настройки проекта
+├── config/
 │   ├── __init__.py
-│   ├── celery.py           # Конфигурация Celery
-│   ├── settings.py         # Основные настройки Django
-│   ├── urls.py             # URL-маршруты проекта
+│   ├── celery.py
+│   ├── settings.py
+│   ├── urls.py
 │   └── wsgi.py
-├── habits/                  # Приложение для работы с привычками
-│   ├── migrations/         # Миграции базы данных
-│   ├── __init__.py
-│   ├── admin.py            # Настройка Django Admin
-│   ├── apps.py
-│   ├── models.py           # Модели данных (Habit)
-│   ├── permissions.py      # Права доступа (IsOwnerOrReadOnly)
-│   ├── serializers.py      # Сериализаторы DRF
-│   ├── tasks.py            # Celery задачи
-│   ├── tests.py
-│   ├── urls.py             # URL-маршруты приложения
-│   └── views.py            # API эндпоинты (ViewSet, Views)
-├── .env                     # Переменные окружения (не коммитится!)
-├── .env.template           # Шаблон переменных окружения
+├── habits/
+│   ├── migrations/
+│   ├── conftest.py
+│   ├── models.py
+│   ├── permissions.py
+│   ├── serializers.py
+│   ├── tasks.py
+│   ├── test_models.py
+│   ├── test_views.py
+│   ├── urls.py
+│   └── views.py
+├── .dockerignore          
+├── .env                   
+├── .env.template          
 ├── .gitignore
+├── Dockerfile            
+├── docker-compose.yml     
 ├── manage.py
-├── pytest.ini              # Конфигурация pytest
-├── README.md
-└── requirements.txt        # Зависимости проекта
+├── pytest.ini
+├── README.md              
+└── requirements.txt
 
 Безопасность
 
@@ -253,4 +255,32 @@ is_public — признак публичности
 В связанные привычки могут попадать только приятные привычки
 У приятной привычки не может быть вознаграждения или связанной привычки
 Нельзя выполнять привычку реже, чем 1 раз в 7 дней
+
+##  Запуск через Docker Compose (рекомендуется)
+
+### Требования
+
+- Docker Desktop (Windows/macOS) или Docker Engine (Linux)
+- Docker Compose v2+
+
+### Быстрый старт
+
+#### 1. Склонируйте репозиторий
+
+```bash
+git clone <repository-url>
+cd PythonProject15
+
+Настройте переменные окружения
+cp .env.template .env
+
+Откройте .env и заполните:
+SECRET_KEY — любой случайный набор символов
+DB_PASSWORD — пароль для PostgreSQL
+TELEGRAM_BOT_TOKEN — токен от @BotFather
+TELEGRAM_CHAT_ID — ваш числовой ID в Telegram
+
+Запустите все сервисы одной командой
+docker-compose up --build -d
+
 

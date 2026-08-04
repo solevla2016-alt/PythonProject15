@@ -21,3 +21,12 @@ env/
 *.swp
 
 media/
+
+# Тесты и покрытие
+htmlcov/
+.pytest_cache/
+.coverage
+
+# OS
+.DS_Store
+Thumbs.db
