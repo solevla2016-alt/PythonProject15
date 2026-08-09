@@ -63,7 +63,6 @@ jobs:
 
       - name: Run tests with pytest
         env:
-          # Передаем переменные окружения для тестов
           DEBUG: 'True'
           SECRET_KEY: 'github-actions-test-secret-key'
           DB_HOST: 'localhost'
@@ -73,10 +72,15 @@ jobs:
           DB_PASSWORD: 'postgres'
           CELERY_BROKER_URL: 'redis://localhost:6379/0'
           CELERY_RESULT_BACKEND: 'redis://localhost:6379/0'
-          CELERY_TASK_ALWAYS_EAGER: 'True'  # Чтобы тесты не пытались реально стучаться в Redis
+          CELERY_TASK_ALWAYS_EAGER: 'True'
           TELEGRAM_BOT_TOKEN: '123456:test-token'
           TELEGRAM_CHAT_ID: '123456'
-        run: pytest
+        run: |
+          # Применяем миграции к тестовой базе данных перед запуском тестов
+          python manage.py migrate
+          
+          # Запускаем тесты, явно указывая модуль настроек
+          pytest --ds=config.settings
 
     # 3: Деплой на сервер (только для main/master)
 
