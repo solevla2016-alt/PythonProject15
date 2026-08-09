@@ -1,0 +1,104 @@
+name: CI/CD Pipeline
+
+# запускать при пуше в main/master и при создании PR
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+
+jobs:
+  # 1: Линтинг (проверка стиля PEP 8)
+
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install flake8
+        run: pip install flake8
+
+      - name: Run flake8
+        run: flake8 habits/ config/ --exclude=migrations,venv,.venv,__pycache__ --max-line-length=120
+
+
+  # 2: Тесты (запускаются только если линт прошел)
+
+  test:
+    runs-on: ubuntu-latest
+    needs: lint
+    # Поднимаем временную базу данных PostgreSQL прямо в GitHub Actions
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: habits_test
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Run tests with pytest
+        env:
+          # Передаем переменные окружения для тестов
+          DEBUG: 'True'
+          SECRET_KEY: 'github-actions-test-secret-key'
+          DB_HOST: 'localhost'
+          DB_PORT: '5432'
+          DB_NAME: 'habits_test'
+          DB_USER: 'postgres'
+          DB_PASSWORD: 'postgres'
+          CELERY_BROKER_URL: 'redis://localhost:6379/0'
+          CELERY_RESULT_BACKEND: 'redis://localhost:6379/0'
+          CELERY_TASK_ALWAYS_EAGER: 'True'  # Чтобы тесты не пытались реально стучаться в Redis
+          TELEGRAM_BOT_TOKEN: '123456:test-token'
+          TELEGRAM_CHAT_ID: '123456'
+        run: pytest
+
+    # 3: Деплой на сервер (только для main/master)
+
+  deploy:
+    runs-on: ubuntu-latest
+    needs: test
+    # Деплоим только если пуш был в главную ветку
+    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
+    steps:
+      - name: Deploy to Server via SSH
+        uses: appleboy/ssh-action@v1.0.0
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script: |
+            # Заходим в папку проекта на сервере
+            cd ~/habits_project
+            # Скачиваем свежие изменения из Git
+            git pull origin main
+            # Пересобираем и перезапускаем контейнеры
+            docker-compose down
+            docker-compose up -d --build
+            # На всякий случай применяем миграции (они уже в command, но лишним не будет)
+            docker-compose exec web python manage.py migrate
